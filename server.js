@@ -31,7 +31,7 @@ io.on('connection', (socket) => {
       name,
     })
   })
-  socket.on('answerCall', (data) => {
-    io.to(data.to).emit('callAccepted', data.signal)
+  socket.on('answerCall', ({ to, name, signal}) => {
+    io.to(to).emit('callAccepted', { name, signal })
   })
 })
