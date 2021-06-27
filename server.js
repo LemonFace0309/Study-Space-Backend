@@ -1,22 +1,27 @@
-const express = require("express");
-const http = require("http");
-const app = express();
-const server = http.createServer(app);
-const socket = require("socket.io");
+const express = require('express')
 const cors = require('cors')
+
+const app = express()
+
 app.use(cors())
-const io = socket(server, {
+
+app.get('/', (req, res) => {
+  res.send('Server is running on 8080')
+})
+
+const server = app.listen(process.env.PORT || 8080)
+const io = require('socket.io')(server, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST'],
   },
-});
+})
+
 
 const users = {};
-
 const socketToRoom = {};
 
-io.on('connection', socket => {
+io.on('connection', (socket) => {
   socket.on("join room", roomID => {
     if (users[roomID]) {
       const length = users[roomID].length;
@@ -50,9 +55,4 @@ io.on('connection', socket => {
       users[roomID] = room;
     }
   });
-
-});
-
-server.listen(process.env.PORT || 8080, () => console.log('Server is running on port 8080'));
-
-
+})
