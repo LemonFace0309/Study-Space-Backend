@@ -22,19 +22,19 @@ const users = {};
 const socketToRoom = {};
 
 io.on('connection', (socket) => {
-  socket.on("join room", roomID => {
-    if (users[roomID]) {
-      const length = users[roomID].length;
+  socket.on("join room", payload => {
+    if (users[payload.roomID]) {
+      const length = users[payload.roomID].length;
       if (length === 4) {
         socket.emit("room full");
         return;
       }
-      users[roomID].push(socket.id);
+      users[payload.roomID].push({socketID: socket.id, username: payload.username});
     } else {
-      users[roomID] = [socket.id];
+      users[payload.roomID] = [{socketID: socket.id, username: payload.username}];
     }
-    socketToRoom[socket.id] = roomID;
-    const usersInThisRoom = users[roomID].filter(id => id !== socket.id);
+    socketToRoom[socket.id] = payload.roomID;
+    const usersInThisRoom = users[payload.roomID].filter(user => user.socketID !== socket.id);
 
     socket.emit("all users", usersInThisRoom);
   });
@@ -55,8 +55,9 @@ io.on('connection', (socket) => {
     const roomID = socketToRoom[socket.id];
     let room = users[roomID];
     if (room) {
-      room = room.filter(id => id !== socket.id);
+      room = room.filter(user => user.socketID !== socket.id);
       users[roomID] = room;
     }
+    io.emit("user disconnect", {room: room, roomID: roomID, users: users[roomID] } );
   });
 })
