@@ -27,7 +27,7 @@ const socketToRoom = {};
 io.on('connection', (socket) => {
   socket.on('join room', (payload) => {
     if (users[payload.roomID]) {
-      const length = users[payload.roomID].length;
+      const { length } = users[payload.roomID];
       if (length === 4) {
         socket.emit('room full');
         return;
@@ -72,8 +72,8 @@ io.on('connection', (socket) => {
       users[roomID] = room;
     }
     io.emit('user disconnect', {
-      room: room,
-      roomID: roomID,
+      room,
+      roomID,
       users: users[roomID],
     });
   });

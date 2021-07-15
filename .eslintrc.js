@@ -1,8 +1,14 @@
 module.exports = {
-  extends: ['airbnb', 'prettier', 'plugin:node/recommended'],
+  extends: ['airbnb-base', 'prettier', 'plugin:node/recommended'],
   plugins: ['prettier'],
   rules: {
-    'prettier/prettier': 'error',
+    'prettier/prettier': [
+      'error',
+      {
+        endOfLine: 'auto',
+      },
+      { usePrettierrc: true },
+    ],
     'no-unused-vars': 'warn',
     'no-console': 'off',
     'no-process-exit': 'off',
