@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const Redis = require('redis');
+const redis = require('redis');
+
+// must configure url for production
+const client = redis.createClient();
 
 const app = express();
 
