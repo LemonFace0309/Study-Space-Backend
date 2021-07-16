@@ -3,7 +3,7 @@ const cors = require('cors');
 const redis = require('redis');
 
 // must configure url for production
-const client = redis.createClient();
+const redisClient = redis.createClient();
 
 const app = express();
 
@@ -42,7 +42,16 @@ io.on('connection', (socket) => {
     socketToRoom[socket.id] = payload.roomID;
     const usersInThisRoom = users[payload.roomID].filter((user) => user.socketID !== socket.id);
 
-    socket.emit('all users', usersInThisRoom);
+    redisClient.lrange(payload.roomID, 0, -1, (error, conversation) => {
+      if (error) {
+        console.debug(error);
+      } else if (conversation != null) {
+        console.debug(JSON.parse(JSON.stringify(conversation)));
+        socket.emit('all users', { users: usersInThisRoom, conversation });
+      } else {
+        socket.emit('all users', { users: usersInThisRoom });
+      }
+    });
   });
 
   socket.on('sending signal', (payload) => {
@@ -60,8 +69,9 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('send message', (message, username) => {
-    io.emit('return message', message, username);
+  socket.on('send message', ({ roomID, message, username }) => {
+    redisClient.lpush(roomID, JSON.stringify({ message, username }));
+    io.emit('return message', { message, username });
   });
 
   socket.on('disconnect', () => {
