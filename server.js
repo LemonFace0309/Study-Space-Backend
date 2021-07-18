@@ -46,8 +46,7 @@ io.on('connection', (socket) => {
       if (error) {
         console.debug(error);
       } else if (conversation != null) {
-        console.debug(JSON.parse(JSON.stringify(conversation)));
-        socket.emit('all users', { users: usersInThisRoom, conversation });
+        socket.emit('all users', { users: usersInThisRoom, conversation: JSON.stringify(conversation) });
       } else {
         socket.emit('all users', { users: usersInThisRoom });
       }
@@ -70,7 +69,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send message', ({ roomID, message, username }) => {
-    redisClient.lpush(roomID, JSON.stringify({ message, username }));
+    redisClient.rpush(roomID, JSON.stringify({ message, username }));
     io.emit('return message', { message, username });
   });
 
