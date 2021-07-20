@@ -3,7 +3,14 @@ const cors = require('cors');
 const redis = require('redis');
 
 // must configure url for production
-const redisClient = redis.createClient();
+const mockRedis = false;
+const mockRedisClient = {
+  lrange: (_, __, ___, cb_fn) => {
+    cb_fn();
+  },
+  rpush: () => {},
+};
+const redisClient = mockRedis ? mockRedisClient : redis.createClient();
 
 const app = express();
 
@@ -26,6 +33,7 @@ const socketToRoom = {};
 
 io.on('connection', (socket) => {
   socket.on('join room', (payload) => {
+    socket.join(payload.roomID);
     if (users[payload.roomID]) {
       const { length } = users[payload.roomID];
       if (length === 4) {
@@ -68,9 +76,10 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('send message', ({ roomID, message, username }) => {
+  socket.on('send message', ({ roomID2, message, username }) => {
+    const roomID = socketToRoom[socket.id];
     redisClient.rpush(roomID, JSON.stringify({ message, username }));
-    io.emit('return message', { message, username });
+    io.to(roomID).emit('return message', { message, username });
   });
 
   socket.on('disconnect', () => {
