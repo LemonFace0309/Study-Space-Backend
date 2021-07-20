@@ -76,10 +76,10 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('send message', ({ roomID2, message, username }) => {
-    const roomID = socketToRoom[socket.id];
+  socket.on('send message', ({ roomID, message, username }) => {
     redisClient.rpush(roomID, JSON.stringify({ message, username }));
-    io.to(roomID).emit('return message', { message, username });
+    const userRoomID = socketToRoom[socket.id];
+    io.to(userRoomID).emit('return message', { message, username });
   });
 
   socket.on('disconnect', () => {
