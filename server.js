@@ -5,8 +5,8 @@ const redis = require('redis');
 // must configure url for production
 const mockRedis = false;
 const mockRedisClient = {
-  lrange: (_, __, ___, cb_fn) => {
-    cb_fn();
+  lrange: (_, __, ___, cb) => {
+    cb();
   },
   rpush: () => {},
 };
