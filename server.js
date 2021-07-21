@@ -44,7 +44,7 @@ io.on('connection', (socket) => {
 
     redisClient.lrange(payload.roomID, 0, -1, (error, conversation) => {
       if (error) {
-        console.debug(error);
+        console.warn(error);
       } else if (conversation != null) {
         socket.emit('all users', { users: usersInThisRoom, conversation: JSON.stringify(conversation) });
       } else {
