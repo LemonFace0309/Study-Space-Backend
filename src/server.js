@@ -1,16 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 
-// must configure url for production
-const mockRedis = false;
-const mockRedisClient = {
-  lrange: (_, __, ___, cb) => {
-    cb();
-  },
-  rpush: () => {},
-};
-const redisClient = mockRedis ? mockRedisClient : require('./redis-client');
-
 const app = express();
 
 app.use(cors());
@@ -20,12 +10,15 @@ app.get('/', (req, res) => {
 });
 
 const server = app.listen(process.env.PORT || 8080);
+
 const io = require('socket.io')(server, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST'],
   },
 });
+
+const redisClient = require('./redis-client');
 
 const users = {};
 const socketToRoom = {};
@@ -49,15 +42,18 @@ io.on('connection', (socket) => {
     socketToRoom[socket.id] = payload.roomID;
     const usersInThisRoom = users[payload.roomID].filter((user) => user.socketID !== socket.id);
 
-    redisClient.lrange(payload.roomID, 0, -1, (error, conversation) => {
-      if (error) {
-        console.warn(error);
-      } else if (conversation != null) {
-        socket.emit('all users', { users: usersInThisRoom, conversation: JSON.stringify(conversation) });
-      } else {
-        socket.emit('all users', { users: usersInThisRoom });
-      }
-    });
+    redisClient
+      .lrange(payload.roomID, 0, -1)
+      .then((conversation) => {
+        if (conversation != null) {
+          socket.emit('all users', { users: usersInThisRoom, conversation: JSON.stringify(conversation) });
+        } else {
+          socket.emit('all users', { users: usersInThisRoom });
+        }
+      })
+      .catch((err) => {
+        console.warn(err);
+      });
   });
 
   socket.on('sending signal', (payload) => {
