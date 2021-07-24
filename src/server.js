@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const redis = require('redis');
 
 // must configure url for production
 const mockRedis = false;
@@ -10,7 +9,7 @@ const mockRedisClient = {
   },
   rpush: () => {},
 };
-const redisClient = mockRedis ? mockRedisClient : redis.createClient();
+const redisClient = mockRedis ? mockRedisClient : require('./redis-client');
 
 const app = express();
 
