@@ -8,7 +8,7 @@ services:
     volumes:
       - $PWD/redis-data:/var/lib/redis
   server:
-    # image: lemonface0309/productify-backend:latest
+    image: lemonface0309/productify-backend:latest
     build: ./
     ports:
       - "8080:8080"
