@@ -35,9 +35,10 @@ io.on('connection', (socket) => {
       users[payload.roomID].push({
         socketID: socket.id,
         username: payload.username,
+        email: payload.email,
       });
     } else {
-      users[payload.roomID] = [{ socketID: socket.id, username: payload.username }];
+      users[payload.roomID] = [{ socketID: socket.id, username: payload.username, email: payload.email }];
     }
     socketToRoom[socket.id] = payload.roomID;
     const usersInThisRoom = users[payload.roomID].filter((user) => user.socketID !== socket.id);
@@ -80,10 +81,18 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const roomID = socketToRoom[socket.id];
     let room = users[roomID];
+    let disconnectedUser;
     if (room) {
+      disconnectedUser = room.find((user) => user.socketID === socket.id);
+      const { email, username } = disconnectedUser;
+      console.debug('removing participants');
+      const removeParticipantFromSpace = require('./resolvers/removeParticipantFromSpace');
+      removeParticipantFromSpace(email, username);
+
       room = room.filter((user) => user.socketID !== socket.id);
       users[roomID] = room;
     }
+    console.debug('users:', users, 'disconnectedUser:', disconnectedUser);
     io.emit('user disconnect', {
       room,
       roomID,
