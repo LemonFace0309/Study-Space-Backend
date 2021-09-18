@@ -14,5 +14,6 @@ module.exports = {
     'no-process-exit': 'off',
     'class-methods-use-this': 'off',
     'node/no-unsupported-features/es-syntax': 'off',
+    'import/order': 'off',
   },
 };
