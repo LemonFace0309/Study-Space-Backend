@@ -36,14 +36,14 @@ io.on('connection', (socket) => {
         return;
       }
       users[roomId].push({
-        socketID: socket.id,
+        socketId: socket.id,
         username,
       });
     } else {
-      users[roomId] = [{ socketID: socket.id, username }];
+      users[roomId] = [{ socketId: socket.id, username }];
     }
     socketToRoom[socket.id] = roomId;
-    const usersInThisRoom = users[roomId].filter((user) => user.socketID !== socket.id);
+    const usersInThisRoom = users[roomId].filter((user) => user.socketId !== socket.id);
 
     try {
       const filter = { spaceId: roomId };
@@ -95,20 +95,20 @@ io.on('connection', (socket) => {
     const roomId = socketToRoom[socket.id];
     let room = users[roomId];
     if (room) {
-      room = room.filter((user) => user.socketID !== socket.id);
+      room = room.filter((user) => user.socketId !== socket.id);
       users[roomId] = room;
     }
-    // try {
-    //   const filter = { spaceId: roomId };
-    //   const participants = users[roomId].map((user) => user.username);
-    //   const update = {
-    //     $set: { participants },
-    //   };
-    //   const client = await dbConnect();
-    //   await client.db(process.env.DATABASE).collection('spaces').updateOne(filter, update);
-    // } catch (err) {
-    //   console.warn('Unable to remove user for space:', err);
-    // }
+    try {
+      const filter = { spaceId: roomId };
+      const participants = users[roomId].map((user) => user.username);
+      const update = {
+        $set: { participants },
+      };
+      const client = await dbConnect();
+      await client.db(process.env.DATABASE).collection('spaces').updateOne(filter, update);
+    } catch (err) {
+      console.warn('Unable to remove user for space:', err);
+    }
     io.emit('user disconnect', {
       room,
       roomId,
