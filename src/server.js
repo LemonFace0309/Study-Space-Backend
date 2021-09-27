@@ -31,16 +31,17 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     if (users[roomId]) {
       const { length } = users[roomId];
-      if (length === 4) {
+      if (length === 10) {
         socket.emit('room full');
         return;
       }
       users[roomId].push({
         socketId: socket.id,
         username,
+        userId,
       });
     } else {
-      users[roomId] = [{ socketId: socket.id, username }];
+      users[roomId] = [{ socketId: socket.id, username, userId }];
     }
     socketToRoom[socket.id] = roomId;
     const usersInThisRoom = users[roomId].filter((user) => user.socketId !== socket.id);
@@ -100,7 +101,7 @@ io.on('connection', (socket) => {
     }
     try {
       const filter = { spaceId: roomId };
-      const participants = users[roomId].map((user) => user.username);
+      const participants = users[roomId].map((user) => ({ username: user.username, userId: ObjectId(user.userId) }));
       const update = {
         $set: { participants },
       };
