@@ -21,7 +21,11 @@ const io = require('socket.io')(server, {
   },
 });
 
-const redisClient = require('./redis-client');
+// const redisClient = require('./redis-client');
+const redisClient = {
+  lrange: async () => null,
+  rpush: async () => null,
+};
 
 const users = {};
 const socketToRoom = {};
