@@ -52,8 +52,9 @@ io.on('connection', (socket) => {
 
     try {
       const filter = { spaceId: roomId };
+      const userIdOrNull = userId ? ObjectId(userId) : null;
       const update = {
-        $push: { participants: { userId: ObjectId(userId), username } },
+        $push: { participants: { userId: userIdOrNull, username } },
       };
       const client = await dbConnect();
       await client.db(process.env.DATABASE).collection('spaces').updateOne(filter, update);
