@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { ObjectId } = require('mongodb');
 
+const redisClient = require('./redis-client');
 const dbConnect = require('./utils/dbConnect');
 
 const app = express();
@@ -21,11 +22,10 @@ const io = require('socket.io')(server, {
   },
 });
 
-// const redisClient = require('./redis-client');
-const redisClient = {
-  lrange: async () => null,
-  rpush: async () => null,
-};
+// const redisClient = {
+//   lrange: async () => null,
+//   rpush: async () => null,
+// };
 
 const users = {};
 const socketToRoom = {};
@@ -76,25 +76,25 @@ io.on('connection', (socket) => {
       });
   });
 
-  socket.on('sending signal', (payload) => {
-    io.to(payload.userToSignal).emit('user joined', {
+  socket.on('offer', (payload) => {
+    io.to(payload.userToSignal).emit('offer', {
       username: payload.username,
       signal: payload.signal,
       callerID: payload.callerID,
     });
   });
 
-  socket.on('returning signal', (payload) => {
-    io.to(payload.callerID).emit('receiving returned signal', {
+  socket.on('answer', (payload) => {
+    io.to(payload.callerID).emit('answer', {
       signal: payload.signal,
       id: socket.id,
     });
   });
 
-  socket.on('send message', ({ roomId, message, username }) => {
+  socket.on('message', ({ roomId, message, username }) => {
     redisClient.rpush(roomId, JSON.stringify({ message, username }));
     const userRoomID = socketToRoom[socket.id];
-    io.to(userRoomID).emit('return message', { message, username });
+    io.to(userRoomID).emit('message', { message, username });
   });
 
   socket.on('disconnect', async () => {
