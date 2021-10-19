@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { ObjectId } = require('mongodb');
 
-const redisClient = require('./redis-client');
+// const redisClient = require('./redis-client');
 const dbConnect = require('./utils/dbConnect');
 
 const app = express();
@@ -22,10 +22,10 @@ const io = require('socket.io')(server, {
   },
 });
 
-// const redisClient = {
-//   lrange: async () => null,
-//   rpush: async () => null,
-// };
+const redisClient = {
+  lrange: async () => null,
+  rpush: async () => null,
+};
 
 const users = {};
 const socketToRoom = {};
