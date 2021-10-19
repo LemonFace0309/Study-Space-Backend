@@ -66,9 +66,9 @@ io.on('connection', (socket) => {
       .lrange(roomId, 0, -1)
       .then((conversation) => {
         if (conversation != null) {
-          socket.emit('all users', { users: usersInThisRoom, conversation: JSON.stringify(conversation) });
+          socket.emit('other users', { users: usersInThisRoom, conversation: JSON.stringify(conversation) });
         } else {
-          socket.emit('all users', { users: usersInThisRoom });
+          socket.emit('other users', { users: usersInThisRoom });
         }
       })
       .catch((err) => {
