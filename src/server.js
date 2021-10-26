@@ -4,6 +4,7 @@ const { ObjectId } = require('mongodb');
 
 // const redisClient = require('./redis-client');
 const dbConnect = require('./utils/dbConnect');
+const utils = require('./utils/server');
 
 const app = express();
 
@@ -31,30 +32,19 @@ const users = {};
 const socketToRoom = {};
 
 io.on('connection', (socket) => {
-  socket.on('join room', async ({ roomId, userId, username }) => {
-    socket.join(roomId);
-    if (users[roomId]) {
-      const { length } = users[roomId];
-      if (length === 10) {
-        socket.emit('room full');
-        return;
-      }
-      users[roomId].push({
-        socketId: socket.id,
-        username,
-        userId,
-      });
-    } else {
-      users[roomId] = [{ socketId: socket.id, username, userId }];
-    }
-    socketToRoom[socket.id] = roomId;
-    const usersInThisRoom = users[roomId].filter((user) => user.socketId !== socket.id);
+  socket.on('join room', async (payload) => {
+    socket.join(payload.roomId);
+
+    utils.addUserToRoom(payload, users, socket);
+
+    socketToRoom[socket.id] = payload.roomId;
+    const usersInThisRoom = users[payload.roomId].filter((user) => user.socketId !== socket.id);
 
     try {
-      const filter = { spaceId: roomId };
-      const userIdOrNull = userId ? ObjectId(userId) : null;
+      const filter = { spaceId: payload.roomId };
+      const userIdOrNull = payload.userId ? ObjectId(payload.userId) : null;
       const update = {
-        $push: { participants: { userId: userIdOrNull, username } },
+        $push: { participants: { userId: userIdOrNull, username: payload.username } },
       };
       const client = await dbConnect();
       await client.db(process.env.DATABASE).collection('spaces').updateOne(filter, update);
@@ -63,7 +53,7 @@ io.on('connection', (socket) => {
     }
 
     redisClient
-      .lrange(roomId, 0, -1)
+      .lrange(payload.roomId, 0, -1)
       .then((conversation) => {
         if (conversation != null) {
           socket.emit('other users', { users: usersInThisRoom, conversation: JSON.stringify(conversation) });
@@ -79,6 +69,7 @@ io.on('connection', (socket) => {
   socket.on('offer', (payload) => {
     io.to(payload.userToSignal).emit('offer', {
       username: payload.username,
+      role: payload.role,
       signal: payload.signal,
       callerID: payload.callerID,
     });
@@ -101,6 +92,7 @@ io.on('connection', (socket) => {
     const roomId = socketToRoom[socket.id];
     let room = users[roomId];
     if (room) {
+      // removes user from room
       room = room.filter((user) => user.socketId !== socket.id);
       users[roomId] = room;
     }
@@ -113,7 +105,7 @@ io.on('connection', (socket) => {
       const client = await dbConnect();
       await client.db(process.env.DATABASE).collection('spaces').updateOne(filter, update);
     } catch (err) {
-      console.warn('Unable to remove user for space:', err);
+      console.warn('Unable to remove user from space:', err);
     }
     io.emit('user disconnect', {
       room,
