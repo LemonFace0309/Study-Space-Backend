@@ -77,6 +77,7 @@ io.on('connection', (socket) => {
       callerID: payload.callerID,
       isAudioEnabled: payload.isAudioEnabled,
       isVideoEnabled: payload.isVideoEnabled,
+      statusBubble: payload.statusBubble,
     });
   });
 
@@ -86,6 +87,7 @@ io.on('connection', (socket) => {
       id: socket.id,
       isAudioEnabled: payload.isAudioEnabled,
       isVideoEnabled: payload.isVideoEnabled,
+      statusBubble: payload.statusBubble,
     });
   });
 
@@ -103,6 +105,11 @@ io.on('connection', (socket) => {
   socket.on('isVideoEnabled', ({ enabled }) => {
     const roomId = socketToRoom[socket.id];
     socket.to(roomId).emit('isVideoEnabled', { id: socket.id, enabled });
+  });
+
+  socket.on('statusBubble', ({ statusBubble }) => {
+    const roomId = socketToRoom[socket.id];
+    socket.to(roomId).emit('statusBubble', { id: socket.id, statusBubble });
   });
 
   socket.on('disconnect', async () => {
