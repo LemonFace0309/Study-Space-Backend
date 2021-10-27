@@ -56,7 +56,10 @@ io.on('connection', (socket) => {
       .lrange(payload.roomId, 0, -1)
       .then((conversation) => {
         if (conversation != null) {
-          socket.emit('other users', { users: usersInThisRoom, conversation: JSON.stringify(conversation) });
+          socket.emit('other users', {
+            users: usersInThisRoom,
+            conversation: JSON.stringify(conversation),
+          });
         } else {
           socket.emit('other users', { users: usersInThisRoom });
         }
@@ -72,6 +75,8 @@ io.on('connection', (socket) => {
       role: payload.role,
       signal: payload.signal,
       callerID: payload.callerID,
+      isAudioEnabled: payload.isAudioEnabled,
+      isVideoEnabled: payload.isVideoEnabled,
     });
   });
 
@@ -79,13 +84,25 @@ io.on('connection', (socket) => {
     io.to(payload.callerID).emit('answer', {
       signal: payload.signal,
       id: socket.id,
+      isAudioEnabled: payload.isAudioEnabled,
+      isVideoEnabled: payload.isVideoEnabled,
     });
   });
 
-  socket.on('message', ({ roomId, message, username }) => {
+  socket.on('message', ({ message, username }) => {
+    const roomId = socketToRoom[socket.id];
     redisClient.rpush(roomId, JSON.stringify({ message, username }));
-    const userRoomID = socketToRoom[socket.id];
-    io.to(userRoomID).emit('message', { message, username });
+    io.to(roomId).emit('message', { message, username });
+  });
+
+  socket.on('isAudioEnabled', ({ enabled }) => {
+    const roomId = socketToRoom[socket.id];
+    socket.to(roomId).emit('isAudioEnabled', { id: socket.id, enabled });
+  });
+
+  socket.on('isVideoEnabled', ({ enabled }) => {
+    const roomId = socketToRoom[socket.id];
+    socket.to(roomId).emit('isVideoEnabled', { id: socket.id, enabled });
   });
 
   socket.on('disconnect', async () => {
