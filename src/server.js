@@ -125,7 +125,7 @@ io.on('connection', (socket) => {
     } catch (err) {
       console.warn(err);
     }
-    io.to(socketId).to(socket.id).emit('dm', { message, username, recipient });
+    io.to(socketId).to(socket.id).emit('dm', { message, socketId: socket.id, sender: username, recipient });
   });
 
   socket.on('isAudioEnabled', ({ enabled }) => {
