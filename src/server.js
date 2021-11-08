@@ -23,6 +23,9 @@ const io = require('socket.io')(server, {
   },
 });
 
+const usersNSP = io.of('/');
+const adminsNSP = io.of('/admins');
+
 const redisClient = {
   lrange: async () => null,
   rpush: async () => null,
@@ -32,16 +35,34 @@ const admins = [];
 const users = {};
 const socketToRoom = {};
 
-/**
- * Todo: move admin logic to a seperate namespace
- */
-io.on('connection', (socket) => {
+adminsNSP.on('connection', (socket) => {
   socket.on('join admin', async (payload) => {
     admins.push({ username: payload.username, socketId: socket.id });
-    io.emit('new admin', { username: payload.username, socketId: socket.id });
+    usersNSP.emit('new admin', { username: payload.username, socketId: socket.id });
     socket.emit('users', { users: Object.values(users).flat() });
   });
 
+  // check if working
+  socket.on('dm', ({ message, username, socketId }) => {
+    let recipient = '';
+    try {
+      const roomId = socketToRoom[socketId];
+      recipient = (users[roomId].find((user) => user.socketId === socketId) || {}).username;
+    } catch (err) {
+      console.warn(err);
+    }
+    usersNSP.to(socketId).emit('dm', { message, socketId: socket.id, sender: username, recipient });
+    socket.emit('dm', { message, socketId: socket.id, sender: username, recipient });
+  });
+
+  socket.on('disconnect', async () => {
+    const index = admins.findIndex((admin) => admin.socketId === socket.id);
+    admins.splice(index, 1);
+    usersNSP.emit('admin disconnect', { admins });
+  });
+});
+
+usersNSP.on('connection', (socket) => {
   socket.on('join room', async (payload) => {
     socket.join(payload.roomId);
 
@@ -74,13 +95,9 @@ io.on('connection', (socket) => {
           socket.emit('other users', { users: usersInThisRoom });
         }
         socket.emit('admins', { admins });
-        /**
-         * Todo: move to separate namespace later
-         */
-        admins.forEach((admin) => {
-          socket.to(admin.socketId).emit('new user', {
-            user: { socketId: socket.id, username: payload.username, userId: payload.userId, role: payload.role },
-          });
+
+        adminsNSP.emit('new user', {
+          user: { socketId: socket.id, username: payload.username, userId: payload.userId, role: payload.role },
         });
       })
       .catch((err) => {
@@ -89,7 +106,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('offer', (payload) => {
-    io.to(payload.userToSignal).emit('offer', {
+    usersNSP.to(payload.userToSignal).emit('offer', {
       username: payload.username,
       role: payload.role,
       signal: payload.signal,
@@ -101,7 +118,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('answer', (payload) => {
-    io.to(payload.callerID).emit('answer', {
+    usersNSP.to(payload.callerID).emit('answer', {
       signal: payload.signal,
       id: socket.id,
       isAudioEnabled: payload.isAudioEnabled,
@@ -113,19 +130,26 @@ io.on('connection', (socket) => {
   socket.on('message', ({ message, username }) => {
     const roomId = socketToRoom[socket.id];
     redisClient.rpush(roomId, JSON.stringify({ message, username }));
-    io.to(roomId).emit('message', { message, username });
+    usersNSP.to(roomId).emit('message', { message, username });
   });
 
   // Todo: add redis caching
   socket.on('dm', ({ message, username, socketId }) => {
-    let recipient = '';
+    let recipient;
     try {
       const roomId = socketToRoom[socketId];
-      recipient = (users[roomId].find((user) => user.socketId === socketId) || {}).username;
+
+      if (roomId) {
+        recipient = (users[roomId].find((user) => user.socketId === socketId) || {}).username;
+        usersNSP.to(socketId).emit('dm', { message, socketId: socket.id, sender: username, recipient });
+      } else {
+        // admin
+        adminsNSP.to(socketId).emit('dm', { message, socketId: socket.id, sender: username, recipient });
+      }
+      socket.emit('dm', { message, socketId: socket.id, sender: username, recipient });
     } catch (err) {
       console.warn(err);
     }
-    io.to(socketId).to(socket.id).emit('dm', { message, socketId: socket.id, sender: username, recipient });
   });
 
   socket.on('isAudioEnabled', ({ enabled }) => {
@@ -173,16 +197,9 @@ io.on('connection', (socket) => {
        * Todo: move to separate namespace later
        */
       const newUsers = Object.values(users).flat();
-      admins.forEach((admin) => {
-        socket.to(admin.socketId).emit('user disconnect', {
-          users: newUsers,
-        });
+      adminsNSP.emit('user disconnect', {
+        users: newUsers,
       });
-    } else {
-      // user is admin
-      const index = admins.findIndex((admin) => admin.socketId === socket.id);
-      admins.splice(index, 1);
-      io.emit('admin disconnect', { admins });
     }
   });
 });
